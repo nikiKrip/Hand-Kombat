@@ -1,4 +1,4 @@
-const socket = new WebSocket("ws://localhost:5000"); 
+const socket = new WebSocket("ws://localhost:5050"); 
 export const sendFrameData = (
   landmarks
 ) => {

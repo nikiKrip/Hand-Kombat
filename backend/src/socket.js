@@ -2,7 +2,7 @@
 import WebSocket, { WebSocketServer } from "ws";
 import axios from "axios";
 
-const wss = new WebSocketServer({ port: 5000 });
+const wss = new WebSocketServer({ port: 5050 });
 
 wss.on("connection", (ws) => {
   ws.on("message", async (message) => {
@@ -16,3 +16,6 @@ wss.on("connection", (ws) => {
     ws.send(JSON.stringify(aiResponse.data));
   });
 });
+console.log(
+  "WebSocket server running on 5050"
+);
