@@ -62,8 +62,27 @@ const video = document.createElement("video");
 
 video.autoplay = true;
 video.playsInline = true;
-video.style.display = "none";
 
+// Camera preview styles
+video.style.position = "fixed";
+video.style.top = "20px";
+video.style.right = "20px";
+
+video.style.width = "220px";
+video.style.height = "160px";
+
+video.style.border = "3px solid white";
+video.style.borderRadius = "12px";
+
+video.style.objectFit = "cover";
+video.style.zIndex = "1000";
+
+// Hit Esc Button to return to main menu
+globalThis.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    gameRunning = false;
+  }
+});
 document.body.appendChild(video);
 
 async function setupCamera() {
