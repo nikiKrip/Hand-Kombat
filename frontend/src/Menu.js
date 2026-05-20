@@ -42,18 +42,53 @@ export default class Menu {
   }
 
   render() {
-    this.ctx.clearRect(0, 0, 800, 600);
+    const canvas = this.ctx.canvas;
+    this.ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     this.ctx.fillStyle = "black";
-    this.ctx.fillRect(0, 0, 800, 600);
+    this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Scale font sizes based on canvas size
+    const titleFontSize = Math.floor(canvas.width / 20);
+    const optionFontSize = Math.floor(canvas.width / 25);
 
     this.ctx.fillStyle = "white";
-    this.ctx.font = "40px Arial";
-    this.ctx.fillText("FIGHT GAME", 250, 150);
+    this.ctx.font = `${titleFontSize}px Arial`;
+    this.ctx.textAlign = "center";
+    this.ctx.fillText("FIGHT GAME", canvas.width / 2, canvas.height / 4);
 
+    this.ctx.font = `${optionFontSize}px Arial`;
+    
     this.options.forEach((opt, index) => {
-      this.ctx.fillStyle = index === this.selected ? "yellow" : "white";
-      this.ctx.fillText(opt, 300, 250 + index * 60);
+      const x = canvas.width / 2;
+      const y = canvas.height / 2 + index * (optionFontSize + 30);
+      
+      // Draw border around selected option
+      if (index === this.selected) {
+        this.ctx.fillStyle = "yellow";
+        
+        // Measure text width for border
+        const textMetrics = this.ctx.measureText(opt);
+        const textWidth = textMetrics.width;
+        const textHeight = optionFontSize;
+        
+        // Draw border rectangle
+        this.ctx.strokeStyle = "yellow";
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(
+          x - textWidth / 2 - 15,
+          y - textHeight + 5,
+          textWidth + 30,
+          textHeight + 10
+        );
+      } else {
+        this.ctx.fillStyle = "white";
+      }
+      
+      this.ctx.fillText(opt, x, y);
     });
+    
+    // Reset text alignment
+    this.ctx.textAlign = "left";
   }
 }

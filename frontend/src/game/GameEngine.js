@@ -26,7 +26,8 @@ export default class GameEngine {
   }
 
   render() {
-    this.ctx.drawImage(this.background, 0, 0, 800, 600);
+    const canvas = this.ctx.canvas;
+    this.ctx.drawImage(this.background, 0, 0, canvas.width, canvas.height);
 
     this.player.draw();
     this.enemy.draw();

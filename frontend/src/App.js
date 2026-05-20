@@ -16,8 +16,26 @@ import {
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-canvas.width = 800;
-canvas.height = 600;
+// Set canvas to fit screen while maintaining aspect ratio
+function resizeCanvas() {
+  const aspectRatio = 4 / 3; // 800:600 ratio
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  
+  let canvasWidth = windowWidth;
+  let canvasHeight = windowWidth / aspectRatio;
+  
+  if (canvasHeight > windowHeight) {
+    canvasHeight = windowHeight;
+    canvasWidth = windowHeight * aspectRatio;
+  }
+  
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 let gameRunning = false;
 
