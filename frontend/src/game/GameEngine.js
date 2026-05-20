@@ -1,5 +1,5 @@
-import HealthBar from "../ui/HealthBar.js";
-import bgImg from "../assets/backgrounds/background.png";  
+import HealthBar from "../UI/HealthBar.js";
+import bgImg from "../assets/background/background.png";
 
 export default class GameEngine {
   constructor(ctx, player, enemy) {
