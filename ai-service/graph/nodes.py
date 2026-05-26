@@ -7,14 +7,32 @@ def observe_node(state):
 def gesture_node(state):
     landmarks = state["landmarks"]
 
-    if not landmarks:
+    if not landmarks or len(landmarks) == 0:
         gesture = "IDLE"
-
-    elif len(landmarks) > 15:
-        gesture = "PUNCH"
-
     else:
-        gesture = "BLOCK"
+        # Get first hand landmarks
+        hand = landmarks[0]
+        
+        # Calculate hand position and finger states
+        # landmarks[0] is wrist, landmarks[8] is index tip, landmarks[12] is middle tip
+        if len(hand) >= 21:
+            wrist_y = hand[0]['y'] if isinstance(hand[0], dict) else hand[0][1]
+            index_tip_y = hand[8]['y'] if isinstance(hand[8], dict) else hand[8][1]
+            middle_tip_y = hand[12]['y'] if isinstance(hand[12], dict) else hand[12][1]
+            
+            # Punch: hand moving forward (fingers extended, hand high)
+            if wrist_y < 0.5 and index_tip_y < wrist_y:
+                gesture = "PUNCH"
+            # Kick: two hands detected or hand very low
+            elif len(landmarks) > 1 or wrist_y > 0.7:
+                gesture = "KICK"
+            # Block: hand in defensive position (fingers up, hand centered)
+            elif wrist_y < 0.6 and index_tip_y < wrist_y - 0.1:
+                gesture = "BLOCK"
+            else:
+                gesture = "IDLE"
+        else:
+            gesture = "IDLE"
 
     state["gesture"] = gesture
     return state
@@ -39,21 +57,47 @@ def predict_node(state):
 
 
 def opponent_node(state):
+    import random
+    
     diff = state["difficulty"]
-
-    if diff["aggression"] > 0.6:
-        state["enemy_action"] = "PUNCH"
+    prediction = state.get("prediction", "idle")
+    
+    # AI opponent logic based on difficulty and player prediction
+    if diff["aggression"] > 0.7:
+        # High aggression: mostly attack
+        actions = ["PUNCH", "KICK", "PUNCH", "KICK", "BLOCK"]
+        state["enemy_action"] = random.choice(actions)
+    elif diff["aggression"] > 0.4:
+        # Medium aggression: balanced
+        if prediction == "PUNCH":
+            # Counter player's punch with block or kick
+            state["enemy_action"] = random.choice(["BLOCK", "KICK", "PUNCH"])
+        else:
+            state["enemy_action"] = random.choice(["PUNCH", "KICK", "BLOCK", "IDLE"])
     else:
-        state["enemy_action"] = "BLOCK"
+        # Low aggression: mostly defensive
+        state["enemy_action"] = random.choice(["BLOCK", "IDLE", "PUNCH"])
 
     return state
 
 
 def coach_node(state):
-    if state["player_history"].count("PUNCHES") > 5:
-        state["tip"] = "Too many punches. Mix moves."
+    history = state["player_history"]
+    
+    punch_count = history.count("PUNCH")
+    kick_count = history.count("KICK")
+    block_count = history.count("BLOCK")
+    
+    if punch_count > 5:
+        state["tip"] = "Too many punches! Try kicks and blocks."
+    elif kick_count > 5:
+        state["tip"] = "Mix in some punches with those kicks!"
+    elif block_count > 3 and punch_count == 0:
+        state["tip"] = "Good defense, but attack more!"
+    elif len(history) > 5 and history[-3:] == ["IDLE", "IDLE", "IDLE"]:
+        state["tip"] = "Make a move! Attack or defend!"
     else:
-        state["tip"] = "Good variation."
+        state["tip"] = "Good strategy! Keep it up!"
 
     return state
 

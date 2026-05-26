@@ -81,20 +81,35 @@ document.body.appendChild(video);
 
 async function setupCamera() {
   try {
-    const stream =
-      await navigator.mediaDevices.getUserMedia({
-        video: true,
-      });
+    console.log("Requesting camera access...");
+    
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: "user"
+      },
+    });
 
     video.srcObject = stream;
 
+    // Wait for video metadata to load
+    await new Promise((resolve) => {
+      video.onloadedmetadata = () => {
+        resolve();
+      };
+    });
+
     await video.play();
 
-    console.log("Camera started");
+    console.log("✅ Camera started successfully");
+    console.log(`Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
 
+    // Start hand tracking after camera is ready
     startHandTracking();
   } catch (err) {
-    console.error("Camera error:", err);
+    console.error("❌ Camera error:", err);
+    alert("Failed to access camera. Please ensure:\n1. Camera permissions are granted\n2. No other app is using the camera\n3. You're using HTTPS or localhost");
   }
 }
 
@@ -104,15 +119,17 @@ async function setupCamera() {
 
 function startHandTracking() {
   runHandTracking(video, (results) => {
-    const landmarks =
-      results.multiHandLandmarks || [];
+    const landmarks = results.multiHandLandmarks || [];
 
-    // Send landmarks to backend AI
-    sendFrameData(landmarks);
-
-    // OPTIONAL:
-    // visualize landmarks in console
-    // console.log(landmarks);
+    // Send landmarks to backend AI only if hands detected
+    if (landmarks.length > 0) {
+      sendFrameData(landmarks);
+      
+      // Visual feedback in console (optional)
+      if (Math.random() < 0.1) { // Log occasionally to avoid spam
+        console.log(`👋 Detected ${landmarks.length} hand(s)`);
+      }
+    }
   });
 }
 
@@ -129,13 +146,12 @@ socket.onmessage = (event) => {
 
   console.log("AI Response:", aiData);
 
-  // Update game state
+  // Update game state (handles both player and enemy)
   game.update(aiData);
 
-  // OPTIONAL:
-  // update player animation too
-  if (aiData.playerAction) {
-    player.perform(aiData.playerAction);
+  // Display coaching tip if available
+  if (aiData.tip) {
+    console.log("Coach Tip:", aiData.tip);
   }
 };
 

@@ -40,12 +40,40 @@ export default class GameEngine {
   }
 
   update(aiData) {
-    // AI action
-    this.enemy.perform(aiData.enemyAction);
+    // Update enemy action
+    if (aiData.enemyAction) {
+      this.enemy.perform(aiData.enemyAction);
+    }
 
-    // Example damage logic
-    if (aiData.enemyAction === "punch" || aiData.enemyAction == "kick" ) {
-      this.player.takeDamage(10);
+    // Update player action
+    if (aiData.playerAction) {
+      this.player.perform(aiData.playerAction);
+    }
+
+    // Damage logic: Enemy attacks player
+    if (aiData.enemyAction === "PUNCH") {
+      // Player takes damage unless blocking
+      if (this.player.state !== "block") {
+        this.player.takeDamage(10);
+      }
+    } else if (aiData.enemyAction === "KICK") {
+      // Kick does more damage
+      if (this.player.state !== "block") {
+        this.player.takeDamage(15);
+      }
+    }
+
+    // Damage logic: Player attacks enemy
+    if (aiData.playerAction === "PUNCH") {
+      // Enemy takes damage unless blocking
+      if (this.enemy.state !== "block") {
+        this.enemy.takeDamage(10);
+      }
+    } else if (aiData.playerAction === "KICK") {
+      // Kick does more damage
+      if (this.enemy.state !== "block") {
+        this.enemy.takeDamage(15);
+      }
     }
   }
 

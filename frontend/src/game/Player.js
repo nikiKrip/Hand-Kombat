@@ -33,11 +33,17 @@ export default class Player {
   }
 
   perform(action) {
+    // Check if dead first
+    if (this.health <= 0) {
+      this.state = "dead";
+      return;
+    }
+    
+    // Set action state
     if (action === "PUNCH") this.state = "punch";
-    else if (action == "KICK") this.state = "kick";
+    else if (action === "KICK") this.state = "kick";
     else if (action === "BLOCK") this.state = "block";
     else this.state = "idle";
-    if (this.health == 0) this.state = "dead"
   }
 
   draw() {
