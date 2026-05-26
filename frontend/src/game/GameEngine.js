@@ -7,8 +7,32 @@ export default class GameEngine {
     this.player = player;
     this.enemy = enemy;
 
-    this.playerHealthBar = new HealthBar(ctx, 50, 50, 200, 20, 100);
-    this.enemyHealthBar = new HealthBar(ctx, 400, 50, 200, 20, 100);
+    const canvas = ctx.canvas;
+
+    const barWidth = canvas.width * 0.25;
+    const barHeight = canvas.height * 0.035;
+
+    const topOffset = canvas.height * 0.05;
+
+    // Player bar (left side)
+    this.playerHealthBar = new HealthBar(
+     ctx,
+     canvas.width * 0.08,
+     topOffset,
+     barWidth,
+     barHeight,
+     100
+    );
+
+    // Enemy bar (right side)
+    this.enemyHealthBar = new HealthBar(
+     ctx,
+     canvas.width - barWidth - canvas.width * 0.08,
+     topOffset,
+     barWidth,
+     barHeight,
+     100
+    );
 
     // ADD BACKGROUND
     this.background = new Image();
