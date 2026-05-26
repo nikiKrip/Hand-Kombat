@@ -8,8 +8,13 @@ export default class Enemy {
   constructor(ctx) {
     this.ctx = ctx;
     this.health = 100;
-    this.x = 500;
-    this.y = 300;
+    const canvas = this.ctx.canvas;
+
+    this.width = canvas.width * 0.18;
+    this.height = canvas.height * 0.35;
+
+    this.x = canvas.width * 0.68;
+    this.y = canvas.height - this.height - 40;
     this.state = "idle";
     this.lastAttack = 0;
 
@@ -43,7 +48,7 @@ export default class Enemy {
 
   draw() {
     const img = this.images[this.state];
-    this.ctx.drawImage(img, this.x, this.y, 100, 100);
+    this.ctx.drawImage(img, this.x, this.y, this.width, this.height);
   }
 
   takeDamage(amount) {
