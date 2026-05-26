@@ -10,10 +10,10 @@ export default class Player {
     this.health = 100;
     const canvas = this.ctx.canvas;
 
-    this.width = canvas.width * 0.28;
-    this.height = canvas.height * 0.35;
+    this.width = canvas.width * 0.38;
+    this.height = canvas.height * 0.55;
 
-    this.x = canvas.width * 0.12;
+    this.x = canvas.width * 0.05;
     this.y = canvas.height - this.height - 40;
     this.state = "idle";
 

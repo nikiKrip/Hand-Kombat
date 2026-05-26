@@ -18,20 +18,14 @@ const ctx = canvas.getContext("2d");
 
 // Set canvas to fit screen while maintaining aspect ratio
 function resizeCanvas() {
-  const aspectRatio = 4 / 3; // 800:600 ratio
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
-  
-  let canvasWidth = windowWidth;
-  let canvasHeight = windowWidth / aspectRatio;
-  
-  if (canvasHeight > windowHeight) {
-    canvasHeight = windowHeight;
-    canvasWidth = windowHeight * aspectRatio;
-  }
-  
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  console.log(
+    "Fullscreen canvas:",
+    canvas.width,
+    canvas.height
+  );
 }
 
 resizeCanvas();
