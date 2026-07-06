@@ -198,6 +198,8 @@ export default class GameEngine {
     if (this.player.health <= 0 || this.enemy.health <= 0) {
       this.gameOver = true;
       this._stopEnemyMovement();
+      if (this.player.health <= 0) this.player.state = "dead";
+      if (this.enemy.health <= 0) this.enemy.state = "dead";
     }
   }
   startMatch() {
