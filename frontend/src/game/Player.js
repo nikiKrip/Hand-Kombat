@@ -42,7 +42,7 @@ export default class Player {
     // Set action state
     if (action === "PUNCH") this.state = "punch";
     else if (action === "KICK") this.state = "kick";
-    else if (action === "BLOCK") this.state = "block";
+    else if (action === "BLOCK" || action === "DEFEND") this.state = "block";
     else this.state = "idle";
   }
 

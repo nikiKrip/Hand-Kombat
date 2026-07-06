@@ -11,10 +11,18 @@ import socket, {
 
 import {
   runHandTracking,
-} from "./game/gesture/handTracking.js";
+} from "./game/gesture/handtracking.js";
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+
+window.addEventListener("error", (event) => {
+  console.error("Global error:", event.error || event.message, event.filename, event.lineno);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("Unhandled rejection:", event.reason);
+});
 
 // Set canvas to fit screen while maintaining aspect ratio
 function resizeCanvas() {
@@ -35,6 +43,7 @@ let gameRunning = false;
 
 const startGame = () => {
   gameRunning = true;
+  game.startMatch();
 };
 
 const menu = new Menu(canvas, startGame);
@@ -71,6 +80,120 @@ video.style.borderRadius = "12px";
 video.style.objectFit = "cover";
 video.style.zIndex = "1000";
 
+const overlay = document.createElement("canvas");
+overlay.style.position = "fixed";
+overlay.style.top = video.style.top;
+overlay.style.right = video.style.right;
+overlay.style.width = video.style.width;
+overlay.style.height = video.style.height;
+overlay.style.pointerEvents = "none";
+overlay.style.zIndex = "1001";
+overlay.style.borderRadius = "12px";
+document.body.appendChild(overlay);
+document.body.appendChild(video);
+
+let lastLandmarks = []; // array of hands (each is 21 landmarks)
+let overlayCtx = overlay.getContext("2d");
+
+function syncOverlaySize() {
+  const vw = video.clientWidth;
+  const vh = video.clientHeight;
+  overlay.width = vw * devicePixelRatio;
+  overlay.height = vh * devicePixelRatio;
+  overlay.style.width = `${vw}px`;
+  overlay.style.height = `${vh}px`;
+  overlayCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+video.addEventListener("loadedmetadata", syncOverlaySize);
+window.addEventListener("resize", syncOverlaySize);
+
+// Gesture detection — mirrors server-side gesture_node exactly.
+// Uses scale-invariant per-finger extension test:
+//   a finger is "extended" if its tip is farther from the wrist than its MCP.
+//
+//   Open hand (>=3 fingers extended)      -> MOVE_FORWARD
+//   Index only extended, others folded    -> KICK  (any orientation)
+//   All fingers folded, fist sideways     -> PUNCH
+//   All fingers folded, any other angle   -> MOVE_BACK
+//   Both hands open                       -> DEFEND (checked in drawOverlay)
+function detectHandGesture(landmarks) {
+  if (!landmarks || landmarks.length === 0) return "IDLE";
+  const wrist = landmarks[0];
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  // tip farther from wrist than MCP => finger is extended
+  const extended = (mcp, tip) => dist(landmarks[tip], wrist) > dist(landmarks[mcp], wrist);
+
+  const indexUp  = extended(5,  8);
+  const middleUp = extended(9,  12);
+  const ringUp   = extended(13, 16);
+  const pinkyUp  = extended(17, 20);
+  const extCount = [indexUp, middleUp, ringUp, pinkyUp].filter(Boolean).length;
+
+  // Open hand: 3 or 4 fingers extended
+  if (extCount >= 3) return "MOVE_FORWARD";
+
+  // KICK: only index extended
+  if (indexUp && !middleUp && !ringUp && !pinkyUp) return "KICK";
+
+  // Remaining gestures need a full fist (0 fingers extended)
+  if (extCount > 0) return "IDLE";
+
+  // PUNCH: fist held sideways — wrist->MCP9 vector >50° from vertical
+  const mcp9 = landmarks[9];
+  const dx = mcp9.x - wrist.x;
+  const dy = mcp9.y - wrist.y;
+  const angleFromVertical = Math.atan2(Math.abs(dx), Math.abs(dy)) * 180 / Math.PI;
+  if (angleFromVertical > 50) return "PUNCH";
+
+  // Default closed fist
+  return "MOVE_BACK";
+}
+
+// draw overlay markers for each detected hand
+const GESTURE_COLORS = {
+  MOVE_FORWARD: "lime",
+  MOVE_BACK: "yellow",
+  PUNCH: "red",
+  KICK: "orange",
+  DEFEND: "cyan",
+  IDLE: "#aaaaaa",
+};
+
+function drawOverlay(hands) {
+  overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+  if (!hands || hands.length === 0) return;
+  const vw = video.clientWidth;
+  const vh = video.clientHeight;
+
+  // Check DEFEND: both hands detected and both open
+  const gestures = hands.map(lm => detectHandGesture(lm));
+  const isDefend = hands.length >= 2 && gestures.every(g => g === "MOVE_FORWARD");
+  const displayGestures = isDefend ? gestures.map(() => "DEFEND") : gestures;
+
+  for (let i = 0; i < hands.length; i++) {
+    const lm = hands[i];
+    const wrist = lm[0];
+    const x = wrist.x * vw;
+    const y = wrist.y * vh;
+    const gesture = displayGestures[i];
+
+    overlayCtx.beginPath();
+    overlayCtx.fillStyle = GESTURE_COLORS[gesture] ?? "white";
+    overlayCtx.strokeStyle = "white";
+    overlayCtx.lineWidth = 2;
+    overlayCtx.arc(x, y, 8, 0, Math.PI * 2);
+    overlayCtx.fill();
+    overlayCtx.stroke();
+
+    overlayCtx.font = "12px Arial";
+    overlayCtx.fillStyle = "white";
+    overlayCtx.fillText(gesture, x + 12, y + 4);
+  }
+}
+
+
+
 // Hit Esc Button to return to main menu
 globalThis.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
@@ -104,6 +227,7 @@ async function setupCamera() {
 
     console.log("✅ Camera started successfully");
     console.log(`Video dimensions: ${video.videoWidth}x${video.videoHeight}`);
+    syncOverlaySize();
 
     // Start hand tracking after camera is ready
     startHandTracking();
@@ -119,16 +243,15 @@ async function setupCamera() {
 
 function startHandTracking() {
   runHandTracking(video, (results) => {
-    const landmarks = results.multiHandLandmarks || [];
+    // Send all detected hands (up to 2) so the server can detect DEFEND (both open)
+    const hands = (results.multiHandLandmarks || []).slice(0, 2);
 
-    // Send landmarks to backend AI only if hands detected
-    if (landmarks.length > 0) {
-      sendFrameData(landmarks);
-      
-      // Visual feedback in console (optional)
-      if (Math.random() < 0.1) { // Log occasionally to avoid spam
-        console.log(`👋 Detected ${landmarks.length} hand(s)`);
-      }
+    lastLandmarks = hands;
+
+    drawOverlay(hands);
+
+    if (hands.length > 0) {
+      sendFrameData(hands);
     }
   });
 }
@@ -144,12 +267,18 @@ socket.onopen = () => {
 socket.onmessage = (event) => {
   const aiData = JSON.parse(event.data);
 
+  // Attach latest local landmarks for contact checks in GameEngine
+  aiData.clientLandmarks = lastLandmarks;
+
   console.log("AI Response:", aiData);
 
   // Update game state (handles both player and enemy)
-  game.update(aiData);
+  try {
+    game.update(aiData);
+  } catch (err) {
+    console.error("Game update failed:", err, aiData);
+  }
 
-  // Display coaching tip if available
   if (aiData.tip) {
     console.log("Coach Tip:", aiData.tip);
   }
@@ -173,7 +302,11 @@ function loop() {
   if (!gameRunning) {
     menu.render();
   } else {
+    try {
     game.render();
+  } catch (err) {
+    console.error("Game render failed:", err);
+  }
   }
 
   requestAnimationFrame(loop);
