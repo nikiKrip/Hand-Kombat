@@ -10,11 +10,7 @@ export default class Enemy {
     this.health = 100;
     const canvas = this.ctx.canvas;
 
-    this.width = canvas.width * 0.28;
-    this.height = canvas.height * 0.55;
-
     this.x = canvas.width * 0.68;
-    this.y = canvas.height - this.height - 40;
     this.state = "idle";
     this.lastAttack = 0;
 
@@ -45,8 +41,18 @@ export default class Enemy {
   }
 
   draw() {
-    const img = this.images[this.state];
-    this.ctx.drawImage(img, this.x, this.y, this.width, this.height);
+    const canvas = this.ctx.canvas;
+    const width = canvas.width * 0.28;
+    const height = canvas.height * 0.55;
+    const y = canvas.height - height - 40;
+    let img = this.images[this.state];
+    // Fall back to idle if the requested state's image isn't loaded yet
+    if (!img || !img.complete || img.naturalWidth === 0) {
+      console.warn(`[Enemy.draw] Image not ready for state="${this.state}", falling back to idle`);
+      img = this.images["idle"];
+    }
+    if (!img || !img.complete || img.naturalWidth === 0) return; // idle not loaded yet either
+    this.ctx.drawImage(img, this.x, y, width, height);
   }
 
   takeDamage(amount) {

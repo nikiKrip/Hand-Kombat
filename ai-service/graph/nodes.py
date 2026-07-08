@@ -136,22 +136,43 @@ def opponent_node(state):
     import random
 
     diff = state["difficulty"]
-    prediction = state.get("prediction", "idle")
+    history = state.get("player_history", [])
+    aggression = diff["aggression"]
 
-    # AI opponent logic based on difficulty and player prediction
-    if diff["aggression"] > 0.7:
-        # High aggression: mostly attack
-        actions = ["PUNCH", "KICK", "PUNCH", "KICK", "BLOCK"]
-        state["enemy_action"] = random.choice(actions)
-    elif diff["aggression"] > 0.4:
-        # Medium aggression: balanced
-        if prediction == "PUNCH":
-            state["enemy_action"] = random.choice(["BLOCK", "KICK", "PUNCH"])
+    # Look at the last 3 frames to read what the player is doing right now
+    recent = history[-3:] if len(history) >= 3 else history
+    player_attacking = any(a in ("PUNCH", "KICK") for a in recent)
+    player_cautious  = all(a in ("IDLE", "MOVE_BACK", "DEFEND") for a in recent) if recent else True
+    player_moving_in = any(a == "MOVE_FORWARD" for a in recent)
+
+    if player_attacking:
+        # Player is aggressive - block attacks
+        if aggression > 0.6:
+            # High aggression enemy: block and counter
+            state["enemy_action"] = random.choice(["BLOCK", "BLOCK", "MOVE_AWAY", "PUNCH"])
         else:
-            state["enemy_action"] = random.choice(["PUNCH", "KICK", "BLOCK", "IDLE"])
+            # Cautious enemy: get out of the way
+            state["enemy_action"] = random.choice(["MOVE_AWAY", "MOVE_AWAY", "BLOCK"])
+
+    elif player_cautious:
+        # Player is passive exploit the opening and attack
+        if aggression > 0.6:
+            # Charge in aggressively
+            state["enemy_action"] = random.choice(["MOVE_TOWARD", "PUNCH", "KICK", "PUNCH"])
+        else:
+            # Advance more carefully, mix in attacks
+            state["enemy_action"] = random.choice(["MOVE_TOWARD", "MOVE_TOWARD", "PUNCH", "IDLE"])
+
+    elif player_moving_in:
+        # Player is closing distance - meet them or prepare
+        if aggression > 0.6:
+            state["enemy_action"] = random.choice(["PUNCH", "KICK", "MOVE_TOWARD"])
+        else:
+            state["enemy_action"] = random.choice(["BLOCK", "MOVE_AWAY", "PUNCH"])
+
     else:
-        # Low aggression: mostly defensive
-        state["enemy_action"] = random.choice(["BLOCK", "IDLE", "PUNCH"])
+        # Mixed / transitional state — balanced response
+        state["enemy_action"] = random.choice(["MOVE_TOWARD", "PUNCH", "BLOCK", "IDLE"])
 
     return state
 

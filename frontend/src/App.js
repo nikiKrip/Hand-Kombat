@@ -247,6 +247,16 @@ function startHandTracking() {
     const hands = (results.multiHandLandmarks || []).slice(0, 2);
 
     lastLandmarks = hands;
+    // Logging the gestures
+    if (hands.length === 0) {
+      console.debug("[Gesture] No hands detected in this frame");
+    } else {
+      const gestures = hands.map((lm, i) => {
+        const g = detectHandGesture(lm);
+        return `hand${i + 1}=${g}`;
+      });
+      console.log(`[Gesture] Detected: ${gestures.join(", ")}`);
+    }
 
     drawOverlay(hands);
 
@@ -267,20 +277,30 @@ socket.onopen = () => {
 socket.onmessage = (event) => {
   const aiData = JSON.parse(event.data);
 
+  console.log(
+    `[AI] playerAction=${aiData.playerAction ?? "none"} | enemyAction=${aiData.enemyAction ?? "none"}`,
+    aiData
+  );
+
+  // Only process game actions once the match has actually started
+  if (!gameRunning) {
+    console.debug("[Game] Message received but game not running yet — ignoring");
+    return;
+  }
+
   // Attach latest local landmarks for contact checks in GameEngine
   aiData.clientLandmarks = lastLandmarks;
-
-  console.log("AI Response:", aiData);
 
   // Update game state (handles both player and enemy)
   try {
     game.update(aiData);
   } catch (err) {
-    console.error("Game update failed:", err, aiData);
+    console.error("[Game] update failed:", err, aiData);
   }
 
-  if (aiData.tip) {
-    console.log("Coach Tip:", aiData.tip);
+  if (aiData.tip && aiData.tip !== socket._lastTip) {
+    socket._lastTip = aiData.tip;
+    console.log("[Coach]", aiData.tip);
   }
 };
 

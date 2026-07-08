@@ -93,10 +93,10 @@ The game will be available at `http://localhost:5173`
 1. **Allow Camera Access**: When prompted, grant camera permissions
 2. **Start Game**: Click "Start Game" on the menu
 3. **Control Your Fighter**:
-   - **Punch**: Extend your hand forward with fingers up (hand high, fingers extended)
-   - **Kick**: Show both hands or place hand very low
-   - **Block**: Hold hand in defensive position (fingers up, hand centered)
-   - **Idle**: No gesture or hand down
+   - **Punch**: Closed hand sideways
+   - **Kick**: Point index finger
+   - **Block**: Both hands in an open state
+   - **Move**: Open one hand to move forward and close one hand to move backward
 
 4. **Win Condition**: Reduce enemy health to zero before yours runs out!
 
